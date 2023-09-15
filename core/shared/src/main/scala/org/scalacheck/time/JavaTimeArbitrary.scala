@@ -10,6 +10,7 @@
 package org.scalacheck.time
 
 import org.scalacheck._
+import org.scalacheck.time.Granularity
 
 import java.time._
 
@@ -20,6 +21,26 @@ import java.time._
   *   enum support.
   */
 private[scalacheck] trait JavaTimeArbitrary {
+
+  private def genZonedDateTime(maybeZone: Option[ZoneId] = None)(implicit
+      granularity: Granularity[ZonedDateTime],
+      yearRange: YearRange
+  ): Gen[ZonedDateTime] =
+    for {
+      year <- Gen.choose(yearRange.min, yearRange.max)
+      month <- Gen.choose(1, 12)
+      maxDaysInMonth = Month.of(month).length(year.isLeap)
+      dayOfMonth <- Gen.choose(1, maxDaysInMonth)
+      hour <- Gen.choose(0, 23)
+      minute <- Gen.choose(0, 59)
+      second <- Gen.choose(0, 59)
+      nanoOfSecond <- Gen.choose(0, 999999999)
+      zoneId <- maybeZone.map(Gen.const).getOrElse(arbZoneId.arbitrary)
+    } yield granularity.normalize(
+      ZonedDateTime.of(year.getValue, month, dayOfMonth, hour, minute, second, nanoOfSecond, zoneId)
+    )
+
+//  private[this] val utcZoneId: ZoneId = ZoneId.of("UTC")
 
   // Duration
 
@@ -35,18 +56,24 @@ private[scalacheck] trait JavaTimeArbitrary {
 
   // Instant
 
-  implicit final lazy val arbInstant: Arbitrary[Instant] =
-    Arbitrary(Gen.choose(Instant.MIN, Instant.MAX))
+  implicit def arbInstant(implicit
+      granularity: Granularity[ZonedDateTime],
+      yearRange: YearRange
+  ): Arbitrary[Instant] =
+    Arbitrary(genZonedDateTime().map(_.toInstant))
 
   // Year
 
-  implicit final lazy val arbYear: Arbitrary[Year] =
-    Arbitrary(Gen.choose(Year.of(Year.MIN_VALUE), Year.of(Year.MAX_VALUE)))
+  implicit def arbYear(implicit yearRange: YearRange): Arbitrary[Year] =
+    Arbitrary(Gen.choose(yearRange.min, yearRange.max))
 
   // LocalDate
 
-  implicit final lazy val arbLocalDate: Arbitrary[LocalDate] =
-    Arbitrary(Gen.choose(LocalDate.MIN, LocalDate.MAX))
+  implicit def arbLocalDate(implicit
+      granularity: Granularity[ZonedDateTime],
+      yearRange: YearRange
+  ): Arbitrary[LocalDate] =
+    Arbitrary(genZonedDateTime().map(_.toLocalDate))
 
   // LocalTime
 
@@ -55,8 +82,11 @@ private[scalacheck] trait JavaTimeArbitrary {
 
   // LocalDateTime
 
-  implicit final lazy val arbLocalDateTime: Arbitrary[LocalDateTime] =
-    Arbitrary(Gen.choose(LocalDateTime.MIN, LocalDateTime.MAX))
+  implicit def arbLocalDateTime(implicit
+      granularity: Granularity[ZonedDateTime],
+      yearRange: YearRange
+  ): Arbitrary[LocalDateTime] =
+    Arbitrary(genZonedDateTime().map(_.toLocalDateTime))
 
   // MonthDay
 
@@ -116,11 +146,8 @@ private[scalacheck] trait JavaTimeArbitrary {
 
   // ZonedDateTime
 
-  implicit final lazy val arbZonedDateTime: Arbitrary[ZonedDateTime] =
-    // The ZoneOffset's here look flipped but they are
-    // not. ZonedDateTime.of(LocalDateTime.MIN, ZoneOffset.MAX) is _older_
-    // than ZonedDateTime.of(LocalDateTime, ZoneOffset.MIN).
-    Arbitrary(Gen.choose(
-      ZonedDateTime.of(LocalDateTime.MIN, ZoneOffset.MAX),
-      ZonedDateTime.of(LocalDateTime.MAX, ZoneOffset.MIN)))
+  implicit def arbZonedDateTime(implicit
+      granularity: Granularity[ZonedDateTime],
+      yearRange: YearRange
+  ): Arbitrary[ZonedDateTime] = Arbitrary(genZonedDateTime())
 }
