@@ -10,7 +10,6 @@
 package org.scalacheck.time
 
 import org.scalacheck._
-import org.scalacheck.time.Granularity
 
 import java.time._
 
@@ -60,7 +59,7 @@ private[scalacheck] trait JavaTimeArbitrary {
       granularity: Granularity[ZonedDateTime],
       yearRange: YearRange
   ): Arbitrary[Instant] =
-    Arbitrary(genZonedDateTime().map(_.toInstant))
+    Arbitrary(genZonedDateTime(Some(ZoneOffset.UTC)).map(_.toInstant))
 
   // Year
 
@@ -73,7 +72,7 @@ private[scalacheck] trait JavaTimeArbitrary {
       granularity: Granularity[ZonedDateTime],
       yearRange: YearRange
   ): Arbitrary[LocalDate] =
-    Arbitrary(genZonedDateTime().map(_.toLocalDate))
+    Arbitrary(genZonedDateTime(Some(ZoneOffset.UTC)).map(_.toLocalDate))
 
   // LocalTime
 
@@ -86,7 +85,7 @@ private[scalacheck] trait JavaTimeArbitrary {
       granularity: Granularity[ZonedDateTime],
       yearRange: YearRange
   ): Arbitrary[LocalDateTime] =
-    Arbitrary(genZonedDateTime().map(_.toLocalDateTime))
+    Arbitrary(genZonedDateTime(Some(ZoneOffset.UTC)).map(_.toLocalDateTime))
 
   // MonthDay
 
